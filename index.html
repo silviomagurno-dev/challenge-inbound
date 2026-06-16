@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competition Challenge · BU Inbound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0a111f;
+  --bg2:#0e1830;
+  --panel:#141f38;
+  --panel2:#1b294a;
+  --line:#26365c;
+  --ink:#eaf1fb;
+  --muted:#8fa1c4;
+  --faint:#5d6f93;
+  --green:#27c08a;
+  --green-d:#0f3b2f;
+  --red:#f0635a;
+  --red-d:#43181a;
+  --gold:#f4b740;
+  --silver:#cfd9e8;
+  --bronze:#cf8a45;
+  --accent:#3d7bff;
+  --display:'Saira Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --body:'Inter', system-ui, -apple-system, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--body);
+  color:var(--ink);
+  background:
+    radial-gradient(120% 70% at 50% -10%, #1a2c52 0%, rgba(26,44,82,0) 55%),
+    radial-gradient(90% 60% at 85% 0%, rgba(61,123,255,.18) 0%, rgba(61,123,255,0) 50%),
+    var(--bg);
+  min-height:100vh;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 22px 70px}
+
+/* ---------- HEADER ---------- */
+header.board{
+  display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:22px;border-bottom:1px solid var(--line);margin-bottom:30px;
+}
+.eyebrow{
+  font-family:var(--body);font-weight:600;font-size:12px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:8px;
+}
+h1{
+  font-family:var(--display);font-weight:800;letter-spacing:.01em;line-height:.92;
+  font-size:clamp(38px,6.4vw,68px);text-transform:uppercase;
+}
+h1 .thin{color:var(--muted);font-weight:600}
+.readouts{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.chip{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:11px;padding:9px 15px;min-width:120px;
+}
+.chip .lab{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.chip .val{font-family:var(--display);font-weight:700;font-size:23px;line-height:1.05;margin-top:3px;color:var(--ink)}
+.chip.live .val{color:var(--gold)}
+
+.uploader{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.src-tag{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+.src-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.src-tag.live .dot{background:var(--green);box-shadow:0 0 0 3px rgba(39,192,138,.18)}
+.admin-tag{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;text-align:right}
+.btn-up{
+  display:inline-flex;align-items:center;gap:10px;cursor:pointer;
+  font-family:var(--body);font-weight:600;font-size:14.5px;color:#06101f;
+  background:linear-gradient(180deg,#ffd06a,var(--gold));
+  border:none;border-radius:11px;padding:13px 20px;
+  box-shadow:0 6px 20px -8px rgba(244,183,64,.6);transition:transform .15s, box-shadow .15s;
+}
+.btn-up:hover{transform:translateY(-1px);box-shadow:0 10px 26px -8px rgba(244,183,64,.7)}
+.btn-up:active{transform:translateY(0)}
+.btn-up:focus-visible{outline:3px solid #fff6;outline-offset:2px}
+.btn-up svg{width:17px;height:17px}
+.up-help{font-size:11.5px;color:var(--faint);max-width:230px;text-align:right}
+.up-help b{color:var(--muted);font-weight:600}
+.status{font-size:12.5px;font-weight:500;display:none}
+.status.ok{display:block;color:var(--green)}
+.status.err{display:block;color:var(--red)}
+.status .reset{color:var(--muted);text-decoration:underline;cursor:pointer;margin-left:8px;font-weight:500}
+
+/* ---------- SECTION TITLES ---------- */
+.sec-head{display:flex;align-items:baseline;gap:14px;margin:42px 0 20px}
+.sec-head h2{
+  font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  font-size:clamp(22px,3.4vw,30px);
+}
+.sec-head .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.sec-head .note{font-size:12px;color:var(--faint);white-space:nowrap}
+
+/* ---------- PODIUM ---------- */
+.podium{
+  display:grid;grid-template-columns:1fr 1.18fr 1fr;gap:14px;align-items:end;
+  max-width:760px;margin:0 auto;padding-top:10px;
+}
+.spot{display:flex;flex-direction:column;align-items:center}
+.card-top{
+  width:100%;background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);border-radius:14px;padding:16px 12px 14px;text-align:center;
+  position:relative;margin-bottom:12px;
+}
+.medal{font-size:30px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.spot .name{
+  font-family:var(--display);font-weight:700;font-size:clamp(16px,2.3vw,21px);
+  text-transform:uppercase;letter-spacing:.01em;margin-top:8px;line-height:1.04;
+}
+.spot .sc{font-family:var(--display);font-weight:800;font-size:34px;margin-top:6px}
+.spot .sc small{font-size:13px;color:var(--faint);font-family:var(--body);font-weight:500;letter-spacing:.1em}
+.pedestal{
+  width:100%;border-radius:12px 12px 4px 4px;position:relative;
+  border:1px solid var(--line);border-bottom:none;
+  display:flex;align-items:flex-start;justify-content:center;
+  transform-origin:bottom;animation:rise .7s cubic-bezier(.2,.8,.25,1) both;
+}
+.pedestal .pos{font-family:var(--display);font-weight:800;font-size:40px;color:#0b1424;opacity:.55;margin-top:10px}
+.spot.p1 .pedestal{height:150px;background:linear-gradient(180deg,#ffd877,var(--gold));animation-delay:.05s}
+.spot.p2 .pedestal{height:108px;background:linear-gradient(180deg,#e6eef9,var(--silver));animation-delay:.18s}
+.spot.p3 .pedestal{height:80px;background:linear-gradient(180deg,#e3a866,var(--bronze));animation-delay:.3s}
+.spot.p1 .sc{color:var(--gold)}
+.spot.p1 .card-top{box-shadow:0 0 0 1px rgba(244,183,64,.35),0 18px 50px -18px rgba(244,183,64,.45)}
+@keyframes rise{from{transform:scaleY(.04);opacity:.2}to{transform:scaleY(1);opacity:1}}
+.card-top{animation:fadeUp .6s ease both}
+.spot.p1 .card-top{animation-delay:.25s}
+.spot.p2 .card-top{animation-delay:.35s}
+.spot.p3 .card-top{animation-delay:.45s}
+@keyframes fadeUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ---------- LEAGUE TABLE ---------- */
+.table-card{
+  background:linear-gradient(180deg,var(--panel),rgba(20,31,56,.6));
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;
+}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:680px}
+thead th{
+  font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);font-weight:600;
+  text-align:center;padding:14px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:rgba(11,18,32,.4);
+}
+thead th.lft{text-align:left;padding-left:20px}
+tbody td{padding:13px 10px;border-bottom:1px solid rgba(38,54,92,.5);text-align:center;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(61,123,255,.06)}
+tbody tr.top1{background:linear-gradient(90deg,rgba(244,183,64,.10),transparent 70%)}
+tbody tr.top2{background:linear-gradient(90deg,rgba(207,217,232,.07),transparent 70%)}
+tbody tr.top3{background:linear-gradient(90deg,rgba(207,138,69,.08),transparent 70%)}
+.pos-cell{font-family:var(--display);font-weight:800;font-size:19px;width:60px}
+.pos-cell .mdl{font-size:18px}
+.team{text-align:left;padding-left:20px;font-weight:600;font-size:15px;letter-spacing:.01em}
+.kpi-chip{
+  display:inline-block;min-width:38px;padding:5px 9px;border-radius:8px;
+  font-family:var(--display);font-weight:700;font-size:16px;line-height:1;
+}
+.kp-pos{background:var(--green-d);color:#5ee0ad;border:1px solid rgba(39,192,138,.3)}
+.kp-neg{background:var(--red-d);color:#ff8c84;border:1px solid rgba(240,99,90,.3)}
+.kp-zero{background:rgba(93,111,147,.16);color:var(--muted);border:1px solid var(--line)}
+.score-cell{width:160px}
+.score-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end;padding-right:8px}
+.score-num{font-family:var(--display);font-weight:800;font-size:24px;min-width:56px;text-align:right}
+.score-bar{height:8px;border-radius:5px;flex:1;max-width:80px;background:rgba(255,255,255,.06);overflow:hidden}
+.score-bar i{display:block;height:100%;border-radius:5px}
+
+/* ---------- WEIGHTS LEGEND ---------- */
+.legend{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px;
+  font-size:13px;color:var(--muted);
+}
+.wt{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;padding:7px 12px}
+.wt b{color:var(--ink);font-family:var(--display);font-weight:700;font-size:15px}
+.wt .pc{color:var(--accent);font-weight:700}
+.formula{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--body)}
+
+/* ---------- DETAIL TABLE ---------- */
+table.detail{min-width:840px}
+table.detail thead th{font-size:10px}
+table.detail .grp{border-left:1px solid var(--line)}
+.subhead th{font-size:9.5px;color:var(--faint);padding:8px 8px;background:rgba(11,18,32,.25);border-bottom:1px solid var(--line)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-size:13.5px}
+.delta{font-weight:600}
+.d-good{color:var(--green)}
+.d-bad{color:var(--red)}
+.muted-cell{color:var(--faint)}
+
+footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+
+@media (max-width:680px){
+  .wrap{padding:20px 14px 56px}
+  header.board{align-items:stretch}
+  .header-right{align-items:stretch}
+  .src-tag{align-self:flex-start}
+  .admin-tag{text-align:left}
+  .uploader{align-items:stretch}
+  .up-help,.status{text-align:left}
+  .btn-up{justify-content:center}
+  .podium{gap:8px;grid-template-columns:1fr 1.1fr 1fr}
+  .spot .sc{font-size:26px}
+  .formula{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  .pedestal,.card-top{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="board">
+    <div class="title-block">
+      <div class="eyebrow">BU Inbound · Scoring Comparti</div>
+      <h1>Competition<br><span class="thin">Challenge</span></h1>
+      <div class="readouts">
+        <div class="chip">
+          <div class="lab">Mese di riferimento</div>
+          <div class="val" id="mese-val">—</div>
+        </div>
+        <div class="chip live">
+          <div class="lab">Dati aggiornati al</div>
+          <div class="val" id="data-val">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="src-tag" id="srcTag"><span class="dot"></span><span id="srcText">Dati di esempio</span></div>
+      <div class="uploader" id="uploader" hidden>
+        <div class="admin-tag">Modalità aggiornamento · solo tu</div>
+        <button class="btn-up" id="upBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+          Carica file (anteprima)
+        </button>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm" hidden>
+        <div class="up-help">Anteprima solo sul tuo schermo. Per pubblicarlo a tutti, sostituisci <b>dati.xlsx</b> nel repository.</div>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PODIUM -->
+  <div class="sec-head">
+    <h2>Il Podio</h2>
+    <div class="rule"></div>
+    <div class="note">Top 3 per Score Composito</div>
+  </div>
+  <div class="podium" id="podium"></div>
+
+  <!-- LEAGUE TABLE -->
+  <div class="sec-head">
+    <h2>Classifica</h2>
+    <div class="rule"></div>
+    <div class="note">Punteggi KPI &amp; score finale</div>
+  </div>
+  <div class="table-card">
+    <div class="scroll">
+      <table id="leagueTable">
+        <thead>
+          <tr>
+            <th>Pos</th>
+            <th class="lft">Comparto</th>
+            <th>Produttività</th>
+            <th>IUQ</th>
+            <th>LDS</th>
+            <th>TMG</th>
+            <th style="text-align:right;padding-right:18px">Score</th>
+          </tr>
+        </thead>
+        <tbody id="leagueBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="legend" id="legend"></div>
+
+  <!-- DETAIL -->
+  <div class="sec-head">
+    <h2>Dettaglio Dati Comparti</h2>
+    <div class="rule"></div>
+    <div class="note">Target · Reale · Scostamento</div>
+  </div>
+  <div class="table-card">
+    <div class="scroll">
+      <table class="detail" id="detailTable">
+        <thead>
+          <tr>
+            <th class="lft" rowspan="2" style="text-align:left;padding-left:20px;vertical-align:bottom">Comparto</th>
+            <th class="grp" colspan="3">Produttività</th>
+            <th class="grp" colspan="1">IUQ</th>
+            <th class="grp" colspan="1">LDS</th>
+            <th class="grp" colspan="3">TMG (secondi)</th>
+          </tr>
+          <tr class="subhead">
+            <th class="grp">Target</th><th>Reale</th><th>Scost %</th>
+            <th class="grp">% SLA target</th>
+            <th class="grp">Scost. medio %</th>
+            <th class="grp">Target</th><th>Reale</th><th>Scost %</th>
+          </tr>
+        </thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    <span>Competition Challenge · BU Inbound — Service Management</span>
+    <span>Score = Produttività×40% + IUQ×30% + LDS×20% + TMG×10%</span>
+  </footer>
+</div>
+
+<script>
+const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const pad=n=>String(n).padStart(2,'0');
+function serialToDate(s){return new Date(Math.round((s-25569)*86400000));}
+function fmtMese(v){
+  if(typeof v==='number'){const d=serialToDate(v);return MESI[d.getUTCMonth()]+' '+d.getUTCFullYear();}
+  if(v instanceof Date)return MESI[v.getUTCMonth()]+' '+v.getUTCFullYear();
+  return v==null?'—':String(v);
+}
+function fmtData(v){
+  if(typeof v==='number'){const d=serialToDate(v);return pad(d.getUTCDate())+'/'+pad(d.getUTCMonth()+1)+'/'+d.getUTCFullYear();}
+  if(v instanceof Date)return pad(v.getUTCDate())+'/'+pad(v.getUTCMonth()+1)+'/'+v.getUTCFullYear();
+  return v==null?'—':String(v);
+}
+const pct=x=>(x==null||isNaN(x))?'—':(x>=0?'+':'')+(x*100).toFixed(1)+'%';
+const pctAbs=x=>(x==null||isNaN(x))?'—':(x*100).toFixed(1)+'%';
+const sec=x=>(x==null||isNaN(x))?'—':x.toFixed(1);
+const fmtScore=x=>Number.isInteger(x)?String(x):x.toFixed(1);
+
+// ---- baked-in default (Giugno 2026, dati al 16/06/2026) ----
+const DEFAULT_STATE={
+  meta:{mese:46174,dataAl:46189},
+  comparti:[
+    {name:"Centro Servizi",prodTarget:0.6499290751,prodReale:0.7801548015,prodScost:0.1302257263,iuq:0.6557377049,lds:0.0232349366,tmgTarget:232.0721644600,tmgReale:227.3386710566,tmgScost:-0.0203966444},
+    {name:"Editoria",prodTarget:0.7608774878,prodReale:0.3689380144,prodScost:-0.3919394734,iuq:1,lds:0.0924411685,tmgTarget:250.8680898350,tmgReale:257.2358095997,tmgScost:0.0253827411},
+    {name:"Gori",prodTarget:0.7887875467,prodReale:0.7799846743,prodScost:-0.0088028724,iuq:0.9725723697,lds:0.0125723697,tmgTarget:218.7003915058,tmgReale:232.5205809561,tmgScost:0.0631923398},
+    {name:"Idrico",prodTarget:0.6174739221,prodReale:0.6514732578,prodScost:0.0339993357,iuq:0.7272727273,lds:0.0071194965,tmgTarget:200.7578923567,tmgReale:191.2529446064,tmgScost:-0.0473453255},
+    {name:"Igiene Ambientale",prodTarget:0.6327,prodReale:0.7084119238,prodScost:0.0757119238,iuq:0.3684210526,lds:-0.1047435415,tmgTarget:146.5303961350,tmgReale:133.0604838710,tmgScost:-0.0919257207},
+    {name:"ITS",prodTarget:0.6757055385,prodReale:0.4064450353,prodScost:-0.2692605033,iuq:0.75,lds:0.0001324769,tmgTarget:149.8125380109,tmgReale:131.7625899281,tmgScost:-0.1204835611},
+    {name:"Medicale",prodTarget:0.6501836530,prodReale:0.6558030290,prodScost:0.0056193760,iuq:0.4054054054,lds:-0.0066986689,tmgTarget:184.9250148588,tmgReale:185.3181770340,tmgScost:0.0021260627}
+  ],
+  scoring:[
+    {name:"Centro Servizi",pProd:10,pIUQ:0,pLDS:2,pTMG:6,score:5},
+    {name:"Editoria",pProd:-10,pIUQ:10,pLDS:8,pTMG:4,score:1},
+    {name:"Gori",pProd:-2,pIUQ:10,pLDS:2,pTMG:2,score:2.8},
+    {name:"Idrico",pProd:4,pIUQ:2,pLDS:0,pTMG:6,score:2.8},
+    {name:"Igiene Ambientale",pProd:8,pIUQ:0,pLDS:0,pTMG:8,score:4},
+    {name:"ITS",pProd:-10,pIUQ:2,pLDS:0,pTMG:10,score:-2.4},
+    {name:"Medicale",pProd:2,pIUQ:0,pLDS:0,pTMG:4,score:1.2}
+  ],
+  weights:{prod:0.4,iuq:0.3,lds:0.2,tmg:0.1}
+};
+
+// ---------- PARSER ----------
+const norm=s=>String(s==null?'':s).replace(/\s+/g,' ').trim().toLowerCase();
+function nextVal(row,i){for(let j=i+1;j<row.length;j++){if(row[j]!=null&&row[j]!=='')return row[j];}return null;}
+function findHeaderRow(rows,must){
+  for(let r=0;r<rows.length;r++){
+    const cells=(rows[r]||[]).map(norm);
+    if(must.every(m=>cells.some(c=>c.includes(m))))return r;
+  }
+  return -1;
+}
+function colMap(headerRow,defs){
+  const m={};const cells=headerRow.map(norm);
+  for(const key in defs){
+    const terms=defs[key];
+    m[key]=cells.findIndex(c=>terms.every(t=>c.includes(t)));
+  }
+  return m;
+}
+function parseWorkbook(wb){
+  const findSheet=re=>wb.SheetNames.find(n=>re.test(n.toLowerCase()));
+  const dcName=findSheet(/dati\s*comparti/);
+  const scName=findSheet(/scoring/);
+  if(!dcName||!scName)throw new Error("Il file deve contenere i fogli 'Dati Comparti' e 'Scoring'.");
+  const dc=XLSX.utils.sheet_to_json(wb.Sheets[dcName],{header:1,raw:true,defval:null});
+  const sc=XLSX.utils.sheet_to_json(wb.Sheets[scName],{header:1,raw:true,defval:null});
+
+  // meta
+  let mese=null,dataAl=null;
+  for(const row of dc){for(let i=0;i<row.length;i++){const c=norm(row[i]);if(c==='mese')mese=nextVal(row,i);if(c==='dati al'||c==='dati al:')dataAl=nextVal(row,i);}}
+
+  // comparti
+  const hr=findHeaderRow(dc,['comparto','produttività']);
+  if(hr<0)throw new Error("Intestazioni 'Dati Comparti' non riconosciute.");
+  const head=dc[hr];
+  const cm=colMap(head,{
+    name:['comparto'],
+    prodTarget:['produttività','target'],prodReale:['produttività','reale'],prodScost:['produttività','scost'],
+    iuq:['iuq'],lds:['lds'],
+    tmgTarget:['tmg','target'],tmgReale:['tmg','reale'],tmgScost:['tmg','scost']
+  });
+  const comparti=[];
+  for(let r=hr+1;r<dc.length;r++){
+    const row=dc[r];if(!row)continue;
+    const nm=row[cm.name];
+    if(nm==null||String(nm).trim()==='')continue;
+    const num=i=>{const v=(i>=0)?row[i]:null;return(typeof v==='number')?v:(v==null||v===''?null:parseFloat(v));};
+    comparti.push({name:String(nm).trim(),prodTarget:num(cm.prodTarget),prodReale:num(cm.prodReale),prodScost:num(cm.prodScost),iuq:num(cm.iuq),lds:num(cm.lds),tmgTarget:num(cm.tmgTarget),tmgReale:num(cm.tmgReale),tmgScost:num(cm.tmgScost)});
+  }
+  const names=new Set(comparti.map(c=>c.name.toLowerCase()));
+
+  // scoring
+  const shr=findHeaderRow(sc,['comparto','composito']);
+  if(shr<0)throw new Error("Intestazioni 'Scoring' non riconosciute.");
+  const shead=sc[shr];
+  const sm=colMap(shead,{name:['comparto'],pProd:['produttività'],pIUQ:['iuq'],pLDS:['lds'],pTMG:['tmg'],score:['composito']});
+  const scoring=[];
+  for(let r=shr+1;r<sc.length;r++){
+    const row=sc[r];if(!row)continue;
+    const nm=row[sm.name];
+    if(nm==null||!names.has(String(nm).trim().toLowerCase()))continue;
+    const num=i=>{const v=(i>=0)?row[i]:null;return(typeof v==='number')?v:(v==null||v===''?0:parseFloat(v))||0;};
+    scoring.push({name:String(nm).trim(),pProd:num(sm.pProd),pIUQ:num(sm.pIUQ),pLDS:num(sm.pLDS),pTMG:num(sm.pTMG),score:num(sm.score)});
+  }
+  if(!comparti.length||!scoring.length)throw new Error("Nessun dato comparto trovato nel file.");
+  return {meta:{mese,dataAl},comparti,scoring,weights:DEFAULT_STATE.weights};
+}
+
+// ---------- RENDER ----------
+function kpiChip(v){
+  const cls=v>0?'kp-pos':(v<0?'kp-neg':'kp-zero');
+  return `<span class="kpi-chip ${cls}">${v>0?'+':''}${fmtScore(v)}</span>`;
+}
+function ranked(state){
+  return [...state.scoring].sort((a,b)=> b.score-a.score || a.name.localeCompare(b.name,'it'));
+}
+function render(state){
+  document.getElementById('mese-val').textContent=fmtMese(state.meta.mese);
+  document.getElementById('data-val').textContent=fmtData(state.meta.dataAl);
+
+  const rank=ranked(state);
+  const scores=rank.map(r=>r.score);
+  const mx=Math.max(...scores),mn=Math.min(...scores);
+  const span=(mx-mn)||1;
+
+  // podium (order: 2nd, 1st, 3rd)
+  const medals=['🥇','🥈','🥉'];
+  const order=[rank[1],rank[0],rank[2]];
+  const cls=['p2','p1','p3'];const mi=[1,0,2];
+  document.getElementById('podium').innerHTML=order.map((r,k)=>{
+    if(!r)return '';
+    return `<div class="spot ${cls[k]}">
+      <div class="card-top">
+        <div class="medal">${medals[mi[k]]}</div>
+        <div class="name">${r.name}</div>
+        <div class="sc">${fmtScore(r.score)}<small> pt</small></div>
+      </div>
+      <div class="pedestal"><div class="pos">${mi[k]+1}</div></div>
+    </div>`;
+  }).join('');
+
+  // league
+  document.getElementById('leagueBody').innerHTML=rank.map((r,i)=>{
+    const pos=i+1;
+    const trCls=pos<=3?`top${pos}`:'';
+    const posCell=pos<=3?`<span class="mdl">${medals[pos-1]}</span>`:pos+'°';
+    const w=Math.max(6,Math.round((r.score-mn)/span*100));
+    const barColor=r.score>0?'linear-gradient(90deg,var(--green),#5ee0ad)':(r.score<0?'linear-gradient(90deg,var(--red),#ff8c84)':'var(--faint)');
+    const scoreColor=r.score>0?'var(--green)':(r.score<0?'var(--red)':'var(--muted)');
+    return `<tr class="${trCls}">
+      <td class="pos-cell">${posCell}</td>
+      <td class="team">${r.name}</td>
+      <td>${kpiChip(r.pProd)}</td>
+      <td>${kpiChip(r.pIUQ)}</td>
+      <td>${kpiChip(r.pLDS)}</td>
+      <td>${kpiChip(r.pTMG)}</td>
+      <td class="score-cell"><div class="score-wrap">
+        <span class="score-num" style="color:${scoreColor}">${fmtScore(r.score)}</span>
+        <span class="score-bar"><i style="width:${w}%;background:${barColor}"></i></span>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  // legend
+  const wt=state.weights;
+  document.getElementById('legend').innerHTML=
+    `<span class="wt"><b>Produttività</b><span class="pc">${Math.round(wt.prod*100)}%</span></span>
+     <span class="wt"><b>IUQ</b><span class="pc">${Math.round(wt.iuq*100)}%</span></span>
+     <span class="wt"><b>LDS</b><span class="pc">${Math.round(wt.lds*100)}%</span></span>
+     <span class="wt"><b>TMG</b><span class="pc">${Math.round(wt.tmg*100)}%</span></span>
+     <span class="formula">Pesi e fasce di punteggio sono modificabili nel foglio “Parametri”.</span>`;
+
+  // detail (same order as ranking)
+  const byName={};state.comparti.forEach(c=>byName[c.name.toLowerCase()]=c);
+  const delta=(v,goodWhenPositive)=>{
+    if(v==null||isNaN(v))return '<span class="muted-cell">—</span>';
+    const good=goodWhenPositive?v>0:v<0;
+    const cl=v===0?'':(good?'d-good':'d-bad');
+    return `<span class="delta ${cl}">${pct(v)}</span>`;
+  };
+  document.getElementById('detailBody').innerHTML=rank.map(r=>{
+    const c=byName[r.name.toLowerCase()]||{};
+    return `<tr>
+      <td class="team">${r.name}</td>
+      <td class="num grp">${pctAbs(c.prodTarget)}</td>
+      <td class="num">${pctAbs(c.prodReale)}</td>
+      <td class="num">${delta(c.prodScost,true)}</td>
+      <td class="num grp">${pctAbs(c.iuq)}</td>
+      <td class="num grp">${delta(c.lds,true)}</td>
+      <td class="num grp">${sec(c.tmgTarget)}</td>
+      <td class="num">${sec(c.tmgReale)}</td>
+      <td class="num">${delta(c.tmgScost,false)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- UPLOAD ----------
+const statusEl=document.getElementById('status');
+function setStatus(msg,type){
+  statusEl.className='status '+type;
+  statusEl.innerHTML=msg+(type==='ok'?' <span class="reset" id="resetLink">Ripristina esempio</span>':'');
+  const rl=document.getElementById('resetLink');
+  if(rl)rl.onclick=()=>{render(DEFAULT_STATE);statusEl.className='status';statusEl.textContent='';};
+}
+document.getElementById('upBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const state=parseWorkbook(wb);
+      render(state);
+      setStatus('✓ Caricato: '+file.name,'ok');
+    }catch(err){
+      setStatus('✗ '+err.message,'err');
+    }
+  };
+  reader.onerror=()=>setStatus('✗ Impossibile leggere il file.','err');
+  reader.readAsArrayBuffer(file);
+  e.target.value='';
+});
+
+// ---------- INIT: dati dal repository + modalità admin ----------
+const DATA_FILE='dati.xlsx';          // file dei dati nel repository GitHub
+const ADMIN_RE=/(^|[#&/])admin\b/i;   // attiva l'anteprima privata con  …/#admin
+
+function setSource(text,live){
+  document.getElementById('srcText').textContent=text;
+  document.getElementById('srcTag').classList.toggle('live',!!live);
+}
+function syncAdmin(){document.getElementById('uploader').hidden=!ADMIN_RE.test(location.hash);}
+window.addEventListener('hashchange',syncAdmin);
+syncAdmin();
+
+render(DEFAULT_STATE);
+setSource('Dati di esempio',false);
+
+(async function loadRepoData(){
+  try{
+    const res=await fetch(DATA_FILE,{cache:'no-store'});
+    if(!res.ok)return;                                   // file non presente → resta sull'esempio
+    const wb=XLSX.read(new Uint8Array(await res.arrayBuffer()),{type:'array'});
+    const state=parseWorkbook(wb);
+    render(state);
+    setSource('Dati pubblicati',true);
+  }catch(e){/* offline o file assente → resta sui dati di esempio */}
+})();</script>
+</body>
+</html>
