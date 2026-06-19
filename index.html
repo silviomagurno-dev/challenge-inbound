@@ -198,6 +198,33 @@ tbody tr.top3{background:linear-gradient(90deg,rgba(192,137,75,.16),transparent 
 .wt .pc{color:var(--accent);font-weight:700}
 .formula{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--body)}
 
+/* ---------- SCALE DI PUNTEGGIO ---------- */
+.scales-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.scale-card{
+  background:linear-gradient(180deg,var(--panel),#fbfcf8);
+  border:1px solid var(--line);border-radius:16px;padding:18px 18px 15px;
+  box-shadow:0 10px 30px -22px rgba(60,80,30,.45);
+}
+.scale-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.scale-head h3{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:22px}
+.wbadge{
+  font-family:var(--display);font-weight:700;font-size:16px;color:var(--brand-ink);
+  background:rgba(145,195,87,.16);border:1px solid rgba(145,195,87,.45);border-radius:8px;padding:3px 11px;
+}
+.scale-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.scale-metric{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--faint);margin:11px 0 13px}
+.dir{
+  display:inline-flex;align-items:center;gap:4px;font-weight:600;font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;padding:3px 9px;border-radius:6px;background:var(--green-d);color:var(--green);
+}
+.bands{display:flex;flex-direction:column;gap:6px}
+.band{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:8px 12px;border-radius:9px;border-left:4px solid var(--ac);background:var(--bt);
+}
+.band-range{font-size:13.5px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.band .kpi-chip{min-width:42px;text-align:center}
+
 /* ---------- DETAIL TABLE ---------- */
 table.detail{min-width:840px}
 table.detail thead th{font-size:10px}
@@ -224,6 +251,7 @@ footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
   .podium{gap:8px;grid-template-columns:1fr 1.1fr 1fr}
   .spot .sc{font-size:26px}
   .formula{margin-left:0;width:100%}
+  .scales-grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){
   .pedestal,.card-top{animation:none}
@@ -331,6 +359,14 @@ footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
     </div>
   </div>
 
+  <!-- SCALE DI PUNTEGGIO -->
+  <div class="sec-head">
+    <h2>Scale di Punteggio</h2>
+    <div class="rule"></div>
+    <div class="note">Come si assegnano i punti per KPI</div>
+  </div>
+  <div class="scales-grid" id="scalesGrid"></div>
+
   <footer>
     <span>Competition Challenge · BU Inbound — Service Management</span>
     <span>Score = Produttività×40% + IUQ×30% + LDS×20% + TMG×10%</span>
@@ -377,8 +413,30 @@ const DEFAULT_STATE={
     {name:"ITS",pProd:-10,pIUQ:2,pLDS:0,pTMG:10,score:-2.4},
     {name:"Medicale",pProd:2,pIUQ:0,pLDS:0,pTMG:4,score:1.2}
   ],
-  weights:{prod:0.4,iuq:0.3,lds:0.2,tmg:0.1}
+  weights:{prod:0.4,iuq:0.3,lds:0.2,tmg:0.1},
+  notes:{
+    prod:'Indicatore prioritario · può essere negativo',
+    iuq:'Qualità SLA · scala assoluta',
+    lds:'Livello di servizio · scostamento vs SLA',
+    tmg:'Tempo medio gestione · scala invertita'
+  }
 };
+
+// ---------- SCALE DI PUNTEGGIO (foglio Parametri) ----------
+const SCALES=[
+  {key:'prod',name:'Produttività',metric:'Scostamento % vs target',dir:'Più alto = meglio',
+   bands:[{r:'≥ +8%',p:10},{r:'+6% … +7.99%',p:8},{r:'+4% … +5.99%',p:6},{r:'+2% … +3.99%',p:4},
+          {r:'0% … +1.99%',p:2},{r:'−1.9% … −0.1%',p:-2},{r:'−3.9% … −2%',p:-5},{r:'≤ −4%',p:-10}]},
+  {key:'iuq',name:'IUQ',metric:'% SLA in target',dir:'Più alto = meglio',
+   bands:[{r:'≥ 95%',p:10},{r:'90% … 94.99%',p:8},{r:'85% … 89.99%',p:6},{r:'80% … 84.99%',p:4},
+          {r:'70% … 79.99%',p:2},{r:'< 70%',p:0}]},
+  {key:'lds',name:'LDS',metric:'Scostamento medio vs SLA',dir:'Più alto = meglio',
+   bands:[{r:'> 12%',p:10},{r:'8.1% … 12%',p:8},{r:'5.1% … 8%',p:6},{r:'3.1% … 5%',p:4},
+          {r:'1.1% … 3%',p:2},{r:'≤ 1%',p:0}]},
+  {key:'tmg',name:'TMG',metric:'Scostamento % vs target',dir:'Più basso = meglio',
+   bands:[{r:'≤ −10%',p:10},{r:'−9.9% … −5%',p:8},{r:'−4.9% … −0.1%',p:6},{r:'0% … +4.9%',p:4},
+          {r:'+5% … +9.9%',p:2},{r:'≥ +10%',p:0}]}
+];
 
 // ---------- PARSER ----------
 const norm=s=>String(s==null?'':s).replace(/\s+/g,' ').trim().toLowerCase();
@@ -444,7 +502,30 @@ function parseWorkbook(wb){
     scoring.push({name:String(nm).trim(),pProd:num(sm.pProd),pIUQ:num(sm.pIUQ),pLDS:num(sm.pLDS),pTMG:num(sm.pTMG),score:num(sm.score)});
   }
   if(!comparti.length||!scoring.length)throw new Error("Nessun dato comparto trovato nel file.");
-  return {meta:{mese,dataAl},comparti,scoring,weights:DEFAULT_STATE.weights};
+
+  // pesi & note dal foglio Parametri (blocco "PESI KPI")
+  const weights={...DEFAULT_STATE.weights};
+  const notes={...DEFAULT_STATE.notes};
+  const parName=wb.SheetNames.find(n=>/parametri/i.test(n));
+  if(parName){
+    const pr=XLSX.utils.sheet_to_json(wb.Sheets[parName],{header:1,raw:true,defval:null});
+    const keyFor=t=>t.includes('produttività')?'prod':t.includes('iuq')?'iuq':t.includes('lds')?'lds':t.includes('tmg')?'tmg':null;
+    const start=pr.findIndex(r=>(r||[]).some(c=>norm(c).includes('pesi kpi')));
+    if(start>=0){
+      for(let r=start+1;r<pr.length;r++){
+        const row=pr[r]||[];
+        const joined=row.map(norm).join(' ');
+        if(joined.includes('totale'))break;
+        const k=keyFor(joined);
+        if(!k)continue;
+        const num=row.find(v=>typeof v==='number');
+        if(num!=null&&num<=1.0001)weights[k]=num;
+        const note=[...row].reverse().find(v=>typeof v==='string'&&v.trim().length>3&&!keyFor(norm(v)));
+        if(note)notes[k]=String(note).replace(/—/g,'·').trim();
+      }
+    }
+  }
+  return {meta:{mese,dataAl},comparti,scoring,weights,notes};
 }
 
 // ---------- RENDER ----------
@@ -531,6 +612,34 @@ function render(state){
       <td class="num">${sec(c.tmgReale)}</td>
       <td class="num">${delta(c.tmgScost,false)}</td>
     </tr>`;
+  }).join('');
+
+  renderScales(state);
+}
+
+function renderScales(state){
+  const w=state.weights||DEFAULT_STATE.weights;
+  const notes=state.notes||DEFAULT_STATE.notes;
+  document.getElementById('scalesGrid').innerHTML=SCALES.map(s=>{
+    const up=s.dir.toLowerCase().includes('alto');
+    const rows=s.bands.map(b=>{
+      const cls=b.p>0?'kp-pos':(b.p<0?'kp-neg':'kp-zero');
+      let ac,bt;
+      if(b.p>=10){ac='var(--gold)';bt='rgba(227,167,47,.12)';}
+      else if(b.p>0){ac='var(--brand)';bt='rgba(145,195,87,.10)';}
+      else if(b.p===0){ac='var(--faint)';bt='rgba(148,160,133,.10)';}
+      else{ac='var(--red)';bt='rgba(214,69,61,.08)';}
+      return `<div class="band" style="--ac:${ac};--bt:${bt}">
+        <span class="band-range">${b.r}</span>
+        <span class="kpi-chip ${cls}">${b.p>0?'+':''}${b.p}</span>
+      </div>`;
+    }).join('');
+    return `<div class="scale-card">
+      <div class="scale-head"><h3>${s.name}</h3><span class="wbadge">${Math.round(w[s.key]*100)}%</span></div>
+      <div class="scale-sub">${notes[s.key]||''}</div>
+      <div class="scale-metric"><span class="dir">${up?'↑':'↓'} ${s.dir}</span><span>${s.metric}</span></div>
+      <div class="bands">${rows}</div>
+    </div>`;
   }).join('');
 }
 
