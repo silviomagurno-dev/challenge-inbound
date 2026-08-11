@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#f4f7ee;
@@ -225,6 +226,29 @@ tbody tr.top3{background:linear-gradient(90deg,rgba(192,137,75,.16),transparent 
 .band-range{font-size:13.5px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
 .band .kpi-chip{min-width:42px;text-align:center}
 
+/* ---------- ANDAMENTO NEL TEMPO ---------- */
+.trend-card{
+  background:linear-gradient(180deg,var(--panel),#fbfcf8);
+  border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px;
+  box-shadow:0 10px 30px -22px rgba(60,80,30,.45);margin-bottom:16px;
+}
+.trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.trend-head h3{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:20px}
+.trend-sub{font-size:12px;color:var(--faint);margin-bottom:12px}
+.trend-canvas-wrap{position:relative;height:340px}
+.cmp-select{
+  font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.02em;color:var(--brand-ink);
+  background:rgba(145,195,87,.14);border:1px solid rgba(145,195,87,.45);border-radius:9px;
+  padding:6px 34px 6px 12px;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23507e22' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 12px center;
+}
+.trend-empty{
+  display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+  background:rgba(145,195,87,.10);border:1px dashed rgba(145,195,87,.5);border-radius:10px;padding:10px 14px;margin-top:10px;
+}
+.trend-empty b{color:var(--brand-ink)}
+
 /* ---------- DETAIL TABLE ---------- */
 table.detail{min-width:840px}
 table.detail thead th{font-size:10px}
@@ -252,6 +276,8 @@ footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
   .spot .sc{font-size:26px}
   .formula{margin-left:0;width:100%}
   .scales-grid{grid-template-columns:1fr}
+  .trend-canvas-wrap{height:280px}
+  .trend-head h3{font-size:18px}
 }
 @media (prefers-reduced-motion:reduce){
   .pedestal,.card-top{animation:none}
@@ -359,6 +385,27 @@ footer{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
     </div>
   </div>
 
+  <!-- ANDAMENTO NEL TEMPO -->
+  <div class="sec-head">
+    <h2>Andamento nel Tempo</h2>
+    <div class="rule"></div>
+    <div class="note">Evoluzione delle performance per comparto</div>
+  </div>
+  <div class="trend-card">
+    <div class="trend-head"><h3>Score Composito · tutti i comparti</h3></div>
+    <div class="trend-sub">Punteggio composito mese per mese</div>
+    <div class="trend-canvas-wrap"><canvas id="trendOverview"></canvas></div>
+    <div class="trend-empty" id="trendHint" hidden>ℹ️ <span>C'è <b>un solo mese</b> disponibile. Aggiungi i mesi precedenti nel foglio <b>Storico</b> del file dati per vedere le linee di andamento.</span></div>
+  </div>
+  <div class="trend-card">
+    <div class="trend-head">
+      <h3>Dettaglio comparto</h3>
+      <select class="cmp-select" id="cmpSelect" aria-label="Seleziona comparto"></select>
+    </div>
+    <div class="trend-sub">Andamento dei 4 KPI e dello score per il comparto selezionato</div>
+    <div class="trend-canvas-wrap"><canvas id="trendDetail"></canvas></div>
+  </div>
+
   <!-- SCALE DI PUNTEGGIO -->
   <div class="sec-head">
     <h2>Scale di Punteggio</h2>
@@ -419,8 +466,46 @@ const DEFAULT_STATE={
     iuq:'Qualità SLA · scala assoluta',
     lds:'Livello di servizio · scostamento vs SLA',
     tmg:'Tempo medio gestione · scala invertita'
-  }
+  },
+  storico:[
+    {mese:'2026-04',name:'Centro Servizi',prod:2,iuq:0,lds:2,tmg:4,score:1.6},
+    {mese:'2026-04',name:'Editoria',prod:-2,iuq:8,lds:6,tmg:2,score:3.0},
+    {mese:'2026-04',name:'Gori',prod:4,iuq:8,lds:2,tmg:2,score:4.6},
+    {mese:'2026-04',name:'Idrico',prod:2,iuq:2,lds:0,tmg:6,score:2.0},
+    {mese:'2026-04',name:'Igiene Ambientale',prod:6,iuq:0,lds:0,tmg:6,score:3.0},
+    {mese:'2026-04',name:'ITS',prod:-5,iuq:2,lds:0,tmg:8,score:-0.6},
+    {mese:'2026-04',name:'Medicale',prod:0,iuq:0,lds:0,tmg:4,score:0.4},
+    {mese:'2026-05',name:'Centro Servizi',prod:6,iuq:0,lds:2,tmg:6,score:3.4},
+    {mese:'2026-05',name:'Editoria',prod:-2,iuq:10,lds:6,tmg:4,score:3.8},
+    {mese:'2026-05',name:'Gori',prod:0,iuq:10,lds:2,tmg:4,score:3.8},
+    {mese:'2026-05',name:'Idrico',prod:4,iuq:0,lds:0,tmg:6,score:2.2},
+    {mese:'2026-05',name:'Igiene Ambientale',prod:8,iuq:0,lds:0,tmg:8,score:4.0},
+    {mese:'2026-05',name:'ITS',prod:-2,iuq:2,lds:0,tmg:10,score:0.8},
+    {mese:'2026-05',name:'Medicale',prod:2,iuq:0,lds:0,tmg:4,score:1.2}
+  ]
 };
+
+const MESI_ABBR=['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const TREND_PALETTE=['#6e9e3a','#3b82c4','#e8843c','#8b5cf6','#12a3a3','#d6453d','#e3a72f','#b7791f','#0ea5e9'];
+function monthKeyLabel(v){
+  let y=null,m=null;
+  if(typeof v==='number'){const d=serialToDate(v);y=d.getUTCFullYear();m=d.getUTCMonth()+1;}
+  else if(v instanceof Date){y=v.getUTCFullYear();m=v.getUTCMonth()+1;}
+  else if(v!=null&&String(v).trim()!==''){
+    const s=String(v).trim();let mm;
+    if(mm=s.match(/^(\d{4})[-/.](\d{1,2})/)){y=+mm[1];m=+mm[2];}
+    else if(mm=s.match(/^(\d{1,2})[-/.](\d{4})$/)){m=+mm[1];y=+mm[2];}
+    else{
+      const low=s.toLowerCase();const ym=low.match(/(\d{4})/);
+      let idx=MESI.findIndex(nm=>low.includes(nm.toLowerCase()));
+      if(idx<0)idx=MESI_ABBR.findIndex(nm=>low.includes(nm.toLowerCase()));
+      if(idx>=0&&ym){m=idx+1;y=+ym[1];}
+    }
+    if(y==null||m==null)return {key:s,label:s};
+  }else return {key:'?',label:'—'};
+  return {key:y+'-'+pad(m),label:(MESI_ABBR[m-1]||'?')+' '+y};
+}
+function trendColor(name,names){const i=names.indexOf(name);return TREND_PALETTE[(i<0?0:i)%TREND_PALETTE.length];}
 
 // ---------- SCALE DI PUNTEGGIO (foglio Parametri) ----------
 const SCALES=[
@@ -525,7 +610,28 @@ function parseWorkbook(wb){
       }
     }
   }
-  return {meta:{mese,dataAl},comparti,scoring,weights,notes};
+  return {meta:{mese,dataAl},comparti,scoring,weights,notes,storico:parseStorico(wb)};
+}
+
+// storico mesi precedenti (foglio "Storico", formato: Mese | Comparto | Produttività | IUQ | LDS | TMG | Score)
+function parseStorico(wb){
+  const name=wb.SheetNames.find(n=>/storico|history/i.test(n));
+  if(!name)return [];
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});
+  const hr=findHeaderRow(rows,['mese','comparto']);
+  if(hr<0)return [];
+  const cm=colMap(rows[hr],{mese:['mese'],name:['comparto'],prod:['produttività'],iuq:['iuq'],lds:['lds'],tmg:['tmg'],score:['score']});
+  if(cm.score<0)cm.score=colMap(rows[hr],{score:['composito']}).score;
+  const out=[];
+  for(let r=hr+1;r<rows.length;r++){
+    const row=rows[r];if(!row)continue;
+    const mv=cm.mese>=0?row[cm.mese]:null;
+    const nm=cm.name>=0?row[cm.name]:null;
+    if(mv==null||mv===''||nm==null||String(nm).trim()==='')continue;
+    const num=i=>{const v=(i>=0)?row[i]:null;return(typeof v==='number')?v:(v==null||v===''?null:parseFloat(v));};
+    out.push({mese:mv,name:String(nm).trim(),prod:num(cm.prod),iuq:num(cm.iuq),lds:num(cm.lds),tmg:num(cm.tmg),score:num(cm.score)});
+  }
+  return out;
 }
 
 // ---------- RENDER ----------
@@ -615,6 +721,67 @@ function render(state){
   }).join('');
 
   renderScales(state);
+  renderHistory(state);
+}
+
+// ---------- ANDAMENTO NEL TEMPO ----------
+let overviewChart=null,detailChart=null,historyCache=null;
+function buildHistory(state){
+  const recs=[];
+  (state.storico||[]).forEach(s=>{const{key,label}=monthKeyLabel(s.mese);recs.push({key,label,name:s.name,prod:s.prod,iuq:s.iuq,lds:s.lds,tmg:s.tmg,score:s.score});});
+  const seen=new Set(recs.map(r=>r.key+'|'+r.name.toLowerCase()));
+  const cur=monthKeyLabel(state.meta.mese);
+  (state.scoring||[]).forEach(s=>{const id=cur.key+'|'+s.name.toLowerCase();if(!seen.has(id)){recs.push({key:cur.key,label:cur.label,name:s.name,prod:s.pProd,iuq:s.pIUQ,lds:s.pLDS,tmg:s.pTMG,score:s.score});seen.add(id);}});
+  const monthMap={};recs.forEach(r=>monthMap[r.key]=r.label);
+  const months=Object.keys(monthMap).sort().map(k=>({key:k,label:monthMap[k]}));
+  const names=[...new Set(recs.map(r=>r.name))].sort((a,b)=>a.localeCompare(b,'it'));
+  const byComparto={};names.forEach(n=>byComparto[n]={});
+  recs.forEach(r=>byComparto[r.name][r.key]=r);
+  return {months,names,byComparto};
+}
+function trendBaseOpts(){
+  const grid=c=>(c.tick&&c.tick.value===0)?'rgba(148,160,133,.85)':'rgba(221,230,204,.55)';
+  const gw=c=>(c.tick&&c.tick.value===0)?1.5:1;
+  return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'top',labels:{font:{family:"'Inter',sans-serif",size:12},color:'#5f6b51',usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14}},
+      tooltip:{backgroundColor:'#fff',titleColor:'#222b1a',bodyColor:'#222b1a',borderColor:'#dde6cc',borderWidth:1,padding:10,cornerRadius:8,usePointStyle:true,
+        titleFont:{family:"'Saira Condensed',sans-serif",weight:'700',size:14},bodyFont:{family:"'Inter',sans-serif",size:12}}},
+    scales:{x:{grid:{color:'rgba(221,230,204,.55)'},ticks:{font:{family:"'Inter',sans-serif",size:12},color:'#5f6b51'}},
+      y:{grid:{color:grid,lineWidth:gw},ticks:{font:{family:"'Inter',sans-serif",size:12},color:'#5f6b51',stepSize:2},
+         title:{display:true,text:'Punteggio',font:{family:"'Inter',sans-serif",size:11},color:'#94a085'}}}};
+}
+function renderHistory(state){
+  if(typeof Chart==='undefined')return;
+  try{
+    const H=buildHistory(state);historyCache=H;
+    const labels=H.months.map(m=>m.label);
+    const single=H.months.length<2;
+    document.getElementById('trendHint').hidden=!single;
+    const ds=H.names.map(n=>{const col=trendColor(n,H.names);return{
+      label:n,data:H.months.map(m=>{const r=H.byComparto[n][m.key];return r?r.score:null;}),
+      borderColor:col,backgroundColor:col,borderWidth:2.5,tension:.3,spanGaps:true,
+      pointRadius:single?5:3,pointHoverRadius:6};});
+    if(overviewChart)overviewChart.destroy();
+    const o=trendBaseOpts();o.scales.y.suggestedMin=-6;o.scales.y.suggestedMax=10;
+    overviewChart=new Chart(document.getElementById('trendOverview'),{type:'line',data:{labels,datasets:ds},options:o});
+    const sel=document.getElementById('cmpSelect');const prev=sel.value;
+    sel.innerHTML=H.names.map(n=>`<option>${n}</option>`).join('');
+    sel.value=H.names.includes(prev)?prev:H.names[0];
+    sel.onchange=()=>drawDetail(sel.value);
+    drawDetail(sel.value);
+  }catch(e){console.warn('Andamento nel tempo non disponibile:',e);}
+}
+function drawDetail(name){
+  const H=historyCache;if(!H||!name||typeof Chart==='undefined')return;
+  const labels=H.months.map(m=>m.label);const single=H.months.length<2;
+  const kpis=[['prod','Produttività','#6e9e3a'],['iuq','IUQ','#3b82c4'],['lds','LDS','#e8843c'],['tmg','TMG','#8b5cf6']];
+  const ds=kpis.map(([k,lbl,c])=>({label:lbl,data:H.months.map(m=>{const r=H.byComparto[name][m.key];return r?r[k]:null;}),
+    borderColor:c,backgroundColor:c,borderWidth:2,tension:.3,spanGaps:true,pointRadius:single?4:2.5,pointHoverRadius:5}));
+  ds.push({label:'Score',data:H.months.map(m=>{const r=H.byComparto[name][m.key];return r?r.score:null;}),
+    borderColor:'#222b1a',backgroundColor:'#222b1a',borderWidth:3.5,tension:.3,spanGaps:true,pointRadius:single?5:3.5,pointHoverRadius:6});
+  if(detailChart)detailChart.destroy();
+  const o=trendBaseOpts();o.scales.y.suggestedMin=-10;o.scales.y.suggestedMax=10;
+  detailChart=new Chart(document.getElementById('trendDetail'),{type:'line',data:{labels,datasets:ds},options:o});
 }
 
 function renderScales(state){
